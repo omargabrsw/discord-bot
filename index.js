@@ -13,6 +13,7 @@ const client = new Client({
 
 // Bot is ready
 client.once('ready', () => {
+  console.log("a7aaaaa it's working ");
   console.log(`🤖 Logged in as ${client.user.tag}`);
 });
 
@@ -27,6 +28,9 @@ client.on('messageCreate', (message) => {
   }
   if (message.content.toLowerCase() === 'كسمك يا رفاعي') {
     message.reply('دانت كسمك انت بقا');
+  }
+  if (message.content.tolowerCase() === 'الف سلامه يا رفاعي') {
+    message.reply('الله يسلمك ياخويا ');
   }
 });
 
