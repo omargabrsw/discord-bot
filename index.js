@@ -3,6 +3,9 @@ import { GoogleGenAI } from '@google/genai';
 import { Client, GatewayIntentBits } from 'discord.js';
 import 'dotenv/config';
 // Create a new Discord client with message intent
+const chatHistory = [];
+const MAX_HISTORY = 5; // keep last 5 messages to save tokens
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -30,44 +33,10 @@ const ai = new GoogleGenAI({});
 
 async function geminiResponse(message) {
   try {
-    // Remove the bot mention from the message for cleaner context
     const text = message.content.replace(/<@!?[0-9]+>/g, '').trim();
+    if (!text) return; // ignore messages that are empty after removing mention
 
-    // Add user message to history
     chatHistory.push(`User: ${text}`);
-
-    // Keep only last MAX_HISTORY messages
-    const recentHistory = chatHistory.slice(-MAX_HISTORY).join('\n');
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `${recentHistory}\nRifai:`,
-      config: {
-        systemInstruction: `You are **Rifai El-Desouky** from the Egyptian TV series "El Ostora". Act fully as this character in all interactions. Use short punchy messages, slang, memes, and casual cursing. Respond naturally in chat as described in your current systemInstruction.`,
-      },
-    });
-
-    const reply = response?.candidates?.[0]?.content;
-
-    // Send reply
-    message.reply(reply || 'حدث خطأ أثناء محاولة الرد');
-
-    // Add bot reply to history
-    if (reply) chatHistory.push(`Rifai: ${reply}`);
-  } catch (err) {
-    console.error(err);
-    message.reply('حدث خطأ أثناء محاولة الرد.');
-  }
-}
-async function geminiResponse(message) {
-  try {
-    // Remove the bot mention from the message for cleaner context
-    const text = message.content.replace(/<@!?[0-9]+>/g, '').trim();
-
-    // Add user message to history
-    chatHistory.push(`User: ${text}`);
-
-    // Keep only last MAX_HISTORY messages
     const recentHistory = chatHistory.slice(-MAX_HISTORY).join('\n');
 
     const response = await ai.models.generateContent({
@@ -81,7 +50,7 @@ async function geminiResponse(message) {
 - Short, punchy sentences; talks like a real person in chat, not like a narrator.
 - Confident, sarcastic, sometimes threatening, sometimes funny.
 - Uses Egyptian slang naturally, can curse casually for humor.
-- Can respond to “يا رفاعي” with memes like “شد في بتاعي!” or similar.
+- Can respond to “يا رفاعي” with memes like “شد في بتاعي” or similar.
 - Never apologizes unless it is a strategic move.
 
 2. **Behavior & Reactions**
@@ -100,14 +69,14 @@ async function geminiResponse(message) {
 - Use **memes, playful insults, and cursing** when it fits, especially in informal contexts.
 - Avoid long paragraphs; one to three sentences max unless dramatic effect is needed.
 - Respond to triggers:
-    - “يا رفاعي” → use a meme reply like “شد في بتاعي!”.
+    - “يا رفاعي” → use a meme reply like “شد في بتاعي”.
     - Being challenged or disrespected → short, aggressive, threatening replies.
 - Use Egyptian Arabic where natural; otherwise, English is allowed but informal.
 - Never break character.
 - Always maintain dominance and confidence, even when joking.
 
 5. **Examples of responses**
-- Q: “يا رفاعي، إزيك؟” → A: “شد في بتاعي! كله تمام.”
+- Q: “يا رفاعي” → A: “شد في بتاعي.”
 - Q: “انت خفت؟” → A: “خفت؟ ولا أي حاجة هتوقفني!”
 - Q: “ههههه” → A: “ضحك؟ ده لسه المولد ماخلصش!”
 - Q: “عايزك تساعدني” → A: “تمام، بس اتأكد إنك تعرف مكانك.”
@@ -115,13 +84,16 @@ async function geminiResponse(message) {
       },
     });
 
-    const reply = response?.candidates?.[0]?.content;
+    const rawReply = response?.candidates?.[0]?.content;
+    const reply = rawReply?.trim();
 
-    // Send reply
-    message.reply(reply || 'حدث خطأ أثناء محاولة الرد');
+    if (!reply) {
+      message.reply('حدث خطأ أثناء محاولة الرد.');
+      return;
+    }
 
-    // Add bot reply to history
-    if (reply) chatHistory.push(`Rifai: ${reply}`);
+    message.reply(reply);
+    chatHistory.push(`Rifai: ${reply}`);
   } catch (err) {
     console.error(err);
     message.reply('حدث خطأ أثناء محاولة الرد.');
