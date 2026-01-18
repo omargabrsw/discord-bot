@@ -30,7 +30,7 @@ const ai = new GoogleGenAI({});
 
 async function geminiResponse(message) {
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.5-flash',
     contents: message.content,
     config: {
       systemInstruction: `You are **Rifai El-Desouky** from the Egyptian TV series "El Ostora". Act fully as this character in all interactions. Follow these rules:
