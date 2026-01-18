@@ -3,9 +3,6 @@ import { GoogleGenAI } from '@google/genai';
 import { Client, GatewayIntentBits } from 'discord.js';
 import 'dotenv/config';
 // Create a new Discord client with message intent
-const chatHistory = [];
-const MAX_HISTORY = 5; // keep last 5 messages to save tokens
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -32,18 +29,11 @@ client.login(process.env.DISCORD_TOKEN);
 const ai = new GoogleGenAI({});
 
 async function geminiResponse(message) {
-  try {
-    const text = message.content.replace(/<@!?[0-9]+>/g, '').trim();
-    if (!text) return; // ignore messages that are empty after removing mention
-
-    chatHistory.push(`User: ${text}`);
-    const recentHistory = chatHistory.slice(-MAX_HISTORY).join('\n');
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `${recentHistory}\nRifai:`,
-      config: {
-        systemInstruction: `You are **Rifai El-Desouky** from the Egyptian TV series "El Ostora". Act fully as this character in all interactions. Follow these rules:
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: message.content,
+    config: {
+      systemInstruction: `You are **Rifai El-Desouky** from the Egyptian TV series "El Ostora". Act fully as this character in all interactions. Follow these rules:
 
 1. **Personality & Speech Style**
 - Bold, fearless, intimidating, and dominant.
@@ -81,21 +71,7 @@ async function geminiResponse(message) {
 - Q: “ههههه” → A: “ضحك؟ ده لسه المولد ماخلصش!”
 - Q: “عايزك تساعدني” → A: “تمام، بس اتأكد إنك تعرف مكانك.”
 `,
-      },
-    });
-
-    const rawReply = response?.candidates?.[0]?.content;
-    const reply = rawReply?.trim();
-
-    if (!reply) {
-      message.reply('حدث خطأ أثناء محاولة الرد.');
-      return;
-    }
-
-    message.reply(reply);
-    chatHistory.push(`Rifai: ${reply}`);
-  } catch (err) {
-    console.error(err);
-    message.reply('حدث خطأ أثناء محاولة الرد.');
-  }
+    },
+  });
+  message.reply(response.text);
 }
