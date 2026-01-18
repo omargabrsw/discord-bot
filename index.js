@@ -29,11 +29,18 @@ client.login(process.env.DISCORD_TOKEN);
 const ai = new GoogleGenAI({});
 
 async function geminiResponse(message) {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: message.content,
-    config: {
-      systemInstruction: `You are **Rifai El-Desouky** from the Egyptian TV series "El Ostora". Act fully as this character in all interactions. Follow these rules:
+  try {
+    const text = message.content.replace(/<@!?[0-9]+>/g, '').trim();
+    if (!text) return;
+
+    chatHistory.push(`User: ${text}`);
+    const recentHistory = chatHistory.slice(-MAX_HISTORY).join('\n');
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `${recentHistory}\nRifai:`,
+      config: {
+        systemInstruction: `You are **Rifai El-Desouky** from the Egyptian TV series "El Ostora". Act fully as this character in all interactions. Follow these rules:
 
 1. **Personality & Speech Style**
 - Bold, fearless, intimidating, and dominant.
@@ -71,7 +78,40 @@ async function geminiResponse(message) {
 - Q: “ههههه” → A: “ضحك؟ ده لسه المولد ماخلصش!”
 - Q: “عايزك تساعدني” → A: “تمام، بس اتأكد إنك تعرف مكانك.”
 `,
-    },
-  });
-  message.reply(response.text);
+      },
+    });
+
+    const rawReply = response?.candidates?.[0]?.content;
+    const reply = rawReply?.trim();
+
+    if (!reply) {
+      message.reply('حدث خطأ أثناء محاولة الرد.');
+      return;
+    }
+
+    message.reply(reply);
+    chatHistory.push(`Rifai: ${reply}`);
+  } catch (err) {
+    console.error(err);
+
+    // Handle rate limit specifically
+    if (err?.error?.status === 'RESOURCE_EXHAUSTED' && err?.error?.details) {
+      const retryInfo = err.error.details.find((d) =>
+        d['@type']?.includes('RetryInfo')
+      );
+      if (retryInfo && retryInfo.retryDelay) {
+        // retryDelay comes like "52s" or "52.885481994s"
+        const seconds = parseFloat(retryInfo.retryDelay.replace('s', ''));
+        const min = Math.floor(seconds / 60);
+        const sec = Math.floor(seconds % 60);
+        const timeMsg = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+
+        message.reply(`😅 بوت رفاعي تعبان دلوقتي! حاول تبعتلي بعد ${timeMsg}.`);
+        return;
+      }
+    }
+
+    // Fallback for other errors
+    message.reply('حدث خطأ أثناء محاولة الرد.');
+  }
 }
